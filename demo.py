@@ -24,6 +24,20 @@ def load_image(file):
         img = img[None]
     return img
 
+def load_ndisp(filename):
+    f = open(filename, "r")
+    lines = f.readlines()
+    f.close()
+
+    line = lines[0].strip()
+    idx = line.find('=')
+    dmin = int(line[idx + 1:])
+
+    line = lines[1].strip()
+    idx = line.find('=')
+    dmax = int(line[idx + 1:])
+    return dmin,dmax
+
 def main():
     parser = argparse.ArgumentParser(description='Dynamic SGM Net')
     parser.add_argument('--gpu', '-g', type=int, default=-1, help='GPU ID (negative value indicates CPU)')
@@ -70,6 +84,9 @@ def main():
         with chainer.no_backprop_mode():
 
             vol = model(*batch)[0].array
+            if target == 'satellite':
+                dmin, dmax = load_ndisp(os.path.join('input', target, 'ndisp.txt'))
+                ndisp = dmax-dmin
             disp = vol.argmin(0).astype(np.float32) * (255 / ndisp)
 
             os.makedirs(os.path.join(args.out, target), exist_ok=True)

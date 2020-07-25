@@ -135,7 +135,26 @@ def reduce_to_vol(l, r, ndisp, reduce_func=dot):
         dmin = -28
         dmax = 25
         slices = []
-        slices.append(reduce_func(l, r[:, :, :, -w0:]))
+
+        ndisp = -dmin
+        for d in range(ndisp-1, 0, -1):
+            x0 = np.maximum(0, w0 - w1 + d)
+            x1 = np.maximum(0, w1 - w0 - d)
+            score = reduce_func(l[:, :, :, x1:-d], r[:, :, :, x0:])
+            print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+            print(-x0, x1, score.shape[-1])
+            p = w0 - score.shape[-1]
+            if p > 0:
+                pad = F.broadcast_to(score[:, :, :, -1:], score.shape[:-1] + (p, ))
+                slices.append(F.concat((score,pad), -1))
+            else:
+                slices.append(score)
+
+        score = reduce_func(l, r[:, :, :, -w0:])
+        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print(0, 0, score.shape[-1])
+        slices.append(score)
+
         ndisp = dmax
         for d in range(1, ndisp):
             x0 = np.maximum(0, w0 - w1 + d)
@@ -147,20 +166,6 @@ def reduce_to_vol(l, r, ndisp, reduce_func=dot):
             if p > 0:
                 pad = F.broadcast_to(score[:, :, :, :1], score.shape[:-1] + (p, ))
                 slices.append(F.concat((pad, score), -1))
-            else:
-                slices.append(score)
-
-        ndisp = -dmin
-        for d in range(1, ndisp):
-            x0 = np.maximum(0, w0 - w1 + d)
-            x1 = np.maximum(0, w1 - w0 - d)
-            score = reduce_func(l[:, :, :, x1:-d], r[:, :, :, x0:])
-            print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-            print(-x0, x1, score.shape[-1])
-            p = w0 - score.shape[-1]
-            if p > 0:
-                pad = F.broadcast_to(score[:, :, :, -1:], score.shape[:-1] + (p, ))
-                slices.append(F.concat((score,pad), -1))
             else:
                 slices.append(score)
 
